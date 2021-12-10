@@ -2,6 +2,7 @@ package bulkload;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.jpa.search.reindex.BlockPolicy;
+import ca.uhn.fhir.rest.client.apache.ApacheRestfulClientFactory;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.client.interceptor.BasicAuthInterceptor;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
@@ -27,11 +28,22 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import static org.apache.commons.lang3.StringUtils.isBlank;
+
 public class SyntheaPerfTest {
 	private static final Logger ourLog = LoggerFactory.getLogger(SyntheaPerfTest.class);
-	private static final FhirContext ourCtx = FhirContext.forR4Cached();
+	private static final FhirContext ourCtx;
 	private static IGenericClient ourClient;
 	private static int ourMaxThreads;
+
+	static {
+
+		ourCtx = FhirContext.forR4();
+		ApacheRestfulClientFactory clientFactory = new ApacheRestfulClientFactory(ourCtx);
+		clientFactory.setPoolMaxPerRoute(100);
+		clientFactory.setPoolMaxTotal(100);
+		ourCtx.setRestfulClientFactory(clientFactory);
+	}
 
 	private static class Uploader {
 
@@ -55,10 +67,6 @@ public class SyntheaPerfTest {
 			mySw = new StopWatch();
 			List<Future<?>> futures = new ArrayList<>();
 			for (Path next : thePaths) {
-				futures.add(myExecutor.submit(new MyTask(next)));
-				futures.add(myExecutor.submit(new MyTask(next)));
-				futures.add(myExecutor.submit(new MyTask(next)));
-				futures.add(myExecutor.submit(new MyTask(next)));
 				futures.add(myExecutor.submit(new MyTask(next)));
 			}
 
@@ -89,6 +97,9 @@ public class SyntheaPerfTest {
 					bundle = IOUtils.toString(reader);
 				} catch (IOException e) {
 					throw new InternalErrorException(e);
+				}
+				if (isBlank(bundle)) {
+					return;
 				}
 
 				ourClient.transaction().withBundle(bundle).execute();
@@ -144,9 +155,9 @@ public class SyntheaPerfTest {
 		ourClient.registerInterceptor(new BasicAuthInterceptor("admin", "password"));
 		ourClient.capabilities().ofType(CapabilityStatement.class).execute();
 
-//		ourLog.info("Loading metadata files...");
-//		List<Path> meta = files.stream().filter(t -> t.toString().contains("hospital") || t.toString().contains("practitioner")).collect(Collectors.toList());
-//		new Uploader(meta);
+		ourLog.info("Loading metadata files...");
+		List<Path> meta = files.stream().filter(t -> t.toString().contains("hospital") || t.toString().contains("practitioner")).collect(Collectors.toList());
+		new Uploader(meta);
 
 		ourLog.info("Loading non metadata files...");
 		List<Path> nonMeta = files.stream().filter(t -> !t.toString().contains("hospital") && !t.toString().contains("practitioner")).collect(Collectors.toList());
