@@ -52,6 +52,7 @@ public class SyntheaPerfTest {
 		private final StopWatch mySw;
 		private final AtomicInteger myFilesCounter = new AtomicInteger(0);
 		private final AtomicInteger myResourcesCounter = new AtomicInteger(0);
+		private final int myPathsCount;
 
 		public Uploader(List<Path> thePaths) throws ExecutionException, InterruptedException {
 			Validate.isTrue(thePaths.size() > 0);
@@ -67,6 +68,7 @@ public class SyntheaPerfTest {
 
 			mySw = new StopWatch();
 			List<Future<?>> futures = new ArrayList<>();
+			myPathsCount = thePaths.size();
 			for (Path next : thePaths) {
 				futures.add(myExecutor.submit(new MyTask(next)));
 			}
@@ -111,12 +113,14 @@ public class SyntheaPerfTest {
 				myResourcesCounter.addAndGet(resourceCount);
 
 				if (fileCount % 10 == 0) {
-					ourLog.info("Have uploaded {} files with {} resources in {} - {} files/sec - {} res/sec",
+					ourLog.info("Have uploaded {}/{} files with {} resources in {} - {} files/sec - {} res/sec - ETA {}",
 						myFilesCounter.get(),
+						myPathsCount,
 						myResourcesCounter.get(),
 						mySw,
 						mySw.formatThroughput(myFilesCounter.get(), TimeUnit.SECONDS),
-						mySw.formatThroughput(myResourcesCounter.get(), TimeUnit.SECONDS));
+						mySw.formatThroughput(myResourcesCounter.get(), TimeUnit.SECONDS),
+						mySw.getEstimatedTimeRemaining(myFilesCounter.get(), myPathsCount));
 					ourLog.info("NEXT,{},{},{},{},{}",
 						mySw.getMillis(),
 						myFilesCounter.get(),
