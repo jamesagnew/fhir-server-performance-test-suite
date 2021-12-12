@@ -21,6 +21,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -133,7 +134,9 @@ public class SyntheaPerfTest {
 
 		String directory = args[0];
 		String baseUrl = args[1];
-		String threads = args[2];
+		String credentials = args[2];
+		String threads = args[3];
+		String uploadMetadata = args[4];
 
 		ourMaxThreads = Integer.parseInt(threads);
 
@@ -141,6 +144,7 @@ public class SyntheaPerfTest {
 		List<Path> files = Files
 			.list(FileSystems.getDefault().getPath(directory))
 			.filter(t -> t.toString().endsWith(".json"))
+			.sorted(Comparator.comparing(Path::toString))
 			.collect(Collectors.toList());
 
 		if (files.size() < 10) {
@@ -152,12 +156,14 @@ public class SyntheaPerfTest {
 		ourCtx.getRestfulClientFactory().setConnectTimeout(1000000);
 		ourCtx.getRestfulClientFactory().setSocketTimeout(1000000);
 		ourClient = ourCtx.newRestfulGenericClient(baseUrl);
-		ourClient.registerInterceptor(new BasicAuthInterceptor("admin", "password"));
+		ourClient.registerInterceptor(new BasicAuthInterceptor(credentials));
 		ourClient.capabilities().ofType(CapabilityStatement.class).execute();
 
-		ourLog.info("Loading metadata files...");
-		List<Path> meta = files.stream().filter(t -> t.toString().contains("hospital") || t.toString().contains("practitioner")).collect(Collectors.toList());
-		new Uploader(meta);
+		if (uploadMetadata.equals("true")) {
+			ourLog.info("Loading metadata files...");
+			List<Path> meta = files.stream().filter(t -> t.toString().contains("hospital") || t.toString().contains("practitioner")).collect(Collectors.toList());
+			new Uploader(meta);
+		}
 
 		ourLog.info("Loading non metadata files...");
 		List<Path> nonMeta = files.stream().filter(t -> !t.toString().contains("hospital") && !t.toString().contains("practitioner")).collect(Collectors.toList());
