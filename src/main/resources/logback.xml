@@ -9,8 +9,24 @@
 		</encoder>
 	</appender>
 
+	<appender name="RUNTIME_SYNC" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+			<level>INFO</level>
+		</filter>
+		<file>synthea-bulk-loader.log</file>
+		<encoder>
+			<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %msg%n</pattern>
+		</encoder>
+	</appender>
+	<appender name="RUNTIME" class="ch.qos.logback.classic.AsyncAppender">
+		<discardingThreshold>0</discardingThreshold>
+		<includeCallerData>false</includeCallerData>
+		<appender-ref ref="RUNTIME_SYNC" />
+	</appender>
+
 	<logger name="bulkload" additivity="false" level="info">
 		<appender-ref ref="STDOUT"/>
+		<appender-ref ref="RUNTIME"/>
 	</logger>
 
 	<root level="ERROR">
