@@ -36,6 +36,7 @@ public class SyntheaPerfTest {
 	private static final FhirContext ourCtx;
 	private static IGenericClient ourClient;
 	private static int ourMaxThreads;
+	private static int ourOffset;
 
 	static {
 
@@ -78,7 +79,7 @@ public class SyntheaPerfTest {
 			}
 
 			ourLog.info("Finished uploading {} files with {} resources in {} - {} files/sec - {} res/sec",
-				myFilesCounter.get(),
+				myFilesCounter.get() + ourOffset,
 				myResourcesCounter.get(),
 				mySw,
 				mySw.formatThroughput(myFilesCounter.get(), TimeUnit.SECONDS),
@@ -114,8 +115,8 @@ public class SyntheaPerfTest {
 
 				if (fileCount % 10 == 0) {
 					ourLog.info("Have uploaded {}/{} files with {} resources in {} - {} files/sec - {} res/sec - ETA {}",
-						myFilesCounter.get(),
-						myPathsCount,
+						myFilesCounter.get() + ourOffset,
+						myPathsCount + ourOffset,
 						myResourcesCounter.get(),
 						mySw,
 						mySw.formatThroughput(myFilesCounter.get(), TimeUnit.SECONDS),
@@ -123,7 +124,7 @@ public class SyntheaPerfTest {
 						mySw.getEstimatedTimeRemaining(myFilesCounter.get(), myPathsCount));
 					ourLog.info("NEXT,{},{},{},{},{}",
 						mySw.getMillis(),
-						myFilesCounter.get(),
+						myFilesCounter.get() + ourOffset,
 						myResourcesCounter.get(),
 						mySw.formatThroughput(myFilesCounter.get(), TimeUnit.SECONDS),
 						mySw.formatThroughput(myResourcesCounter.get(), TimeUnit.SECONDS));
@@ -141,6 +142,10 @@ public class SyntheaPerfTest {
 		String credentials = args[2];
 		String threads = args[3];
 		String uploadMetadata = args[4];
+		if (args.length >= 6) {
+			String offset = args[5];
+			ourOffset = Integer.parseInt(offset);
+		}
 
 		ourMaxThreads = Integer.parseInt(threads);
 
@@ -153,6 +158,11 @@ public class SyntheaPerfTest {
 
 		if (files.size() < 10) {
 			throw new Exception(files.size() + " .json files found in " + directory);
+		}
+
+		if (ourOffset > 0) {
+			ourLog.info("Starting at offset {}", ourOffset);
+			files = files.subList(ourOffset, files.size());
 		}
 
 		ourLog.info("Uploading to FHIR server at base URL: {}", baseUrl);
