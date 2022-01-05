@@ -5,6 +5,7 @@ import ca.uhn.fhir.jpa.search.reindex.BlockPolicy;
 import ca.uhn.fhir.rest.client.apache.ApacheRestfulClientFactory;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.client.interceptor.BasicAuthInterceptor;
+import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import ca.uhn.fhir.util.StopWatch;
 import org.apache.commons.io.IOUtils;
@@ -27,6 +28,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
@@ -34,7 +36,9 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 public class SyntheaPerfTest {
 	private static final Logger ourLog = LoggerFactory.getLogger(SyntheaPerfTest.class);
 	private static final FhirContext ourCtx;
-	private static IGenericClient ourClient;
+	private static List<IGenericClient> ourClients = new ArrayList<>();
+	private static List<AtomicInteger> ourClientInvocationCounts = new ArrayList<>();
+	private static List<AtomicLong> ourClientInvocationTimes = new ArrayList<>();
 	private static int ourMaxThreads;
 	private static int ourOffset;
 
@@ -52,7 +56,9 @@ public class SyntheaPerfTest {
 		private final ThreadPoolTaskExecutor myExecutor;
 		private final StopWatch mySw;
 		private final AtomicInteger myFilesCounter = new AtomicInteger(0);
-		private final AtomicInteger myResourcesCounter = new AtomicInteger(0);
+		private final AtomicInteger myErrorsCounter = new AtomicInteger(0);
+		private final AtomicLong myResourcesCounter = new AtomicLong(0);
+		private final AtomicInteger myClientIndex = new AtomicInteger(0);
 		private final int myPathsCount;
 
 		public Uploader(List<Path> thePaths) throws ExecutionException, InterruptedException {
@@ -96,38 +102,74 @@ public class SyntheaPerfTest {
 
 			@Override
 			public void run() {
-				String bundle;
-				try (FileReader reader = new FileReader(myPath.toFile())) {
-					bundle = IOUtils.toString(reader);
-				} catch (IOException e) {
-					throw new InternalErrorException(e);
-				}
-				if (isBlank(bundle)) {
-					return;
-				}
+				try {
+					String bundle;
+					try (FileReader reader = new FileReader(myPath.toFile())) {
+						bundle = IOUtils.toString(reader);
+					} catch (IOException e) {
+						throw new InternalErrorException(e);
+					}
+					if (isBlank(bundle)) {
+						return;
+					}
 
-				ourClient.transaction().withBundle(bundle).execute();
+					try {
+						int clientIndex = myClientIndex.incrementAndGet() % ourClients.size();
+						IGenericClient client = ourClients.get(clientIndex);
 
-				// Subtract by 1 because of the Bundle resource
-				int resourceCount = StringUtils.countMatches(bundle, "resourceType") - 1;
-				int fileCount = myFilesCounter.incrementAndGet();
-				myResourcesCounter.addAndGet(resourceCount);
+						long start = System.currentTimeMillis();
+						client
+							.transaction()
+							.withBundle(bundle)
+							.execute();
+						long latency = System.currentTimeMillis() - start;
 
-				if (fileCount % 10 == 0) {
-					ourLog.info("Have uploaded {}/{} files with {} resources in {} - {} files/sec - {} res/sec - ETA {}",
-						myFilesCounter.get() + ourOffset,
-						myPathsCount + ourOffset,
-						myResourcesCounter.get(),
-						mySw,
-						mySw.formatThroughput(myFilesCounter.get(), TimeUnit.SECONDS),
-						mySw.formatThroughput(myResourcesCounter.get(), TimeUnit.SECONDS),
-						mySw.getEstimatedTimeRemaining(myFilesCounter.get(), myPathsCount));
-					ourLog.info("NEXT,{},{},{},{},{}",
-						mySw.getMillis(),
-						myFilesCounter.get() + ourOffset,
-						myResourcesCounter.get(),
-						mySw.formatThroughput(myFilesCounter.get(), TimeUnit.SECONDS),
-						mySw.formatThroughput(myResourcesCounter.get(), TimeUnit.SECONDS));
+						ourClientInvocationCounts.get(clientIndex).incrementAndGet();
+						ourClientInvocationTimes.get(clientIndex).addAndGet(latency);
+
+						// Subtract by 1 because of the Bundle resource
+						int resourceCount = StringUtils.countMatches(bundle, "resourceType") - 1;
+						myResourcesCounter.addAndGet(resourceCount);
+
+					} catch (BaseServerResponseException e) {
+						ourLog.error("Failure: {}", e.toString());
+						myErrorsCounter.incrementAndGet();
+					}
+
+					int fileCount = myFilesCounter.incrementAndGet();
+					if (fileCount % 10 == 0) {
+						ourLog.info("Have uploaded {}/{} files with {} resources in {} - {} files/sec - {} res/sec - ETA {} - {} errors",
+							myFilesCounter.get() + ourOffset,
+							myPathsCount + ourOffset,
+							myResourcesCounter.get(),
+							mySw,
+							mySw.formatThroughput(myFilesCounter.get(), TimeUnit.SECONDS),
+							mySw.formatThroughput(myResourcesCounter.get(), TimeUnit.SECONDS),
+							mySw.getEstimatedTimeRemaining(myFilesCounter.get(), myPathsCount),
+							myErrorsCounter.get());
+						ourLog.info("NEXT,{},{},{},{},{},{}",
+							mySw.getMillis(),
+							myFilesCounter.get() + ourOffset,
+							myResourcesCounter.get(),
+							mySw.formatThroughput(myFilesCounter.get(), TimeUnit.SECONDS),
+							mySw.formatThroughput(myResourcesCounter.get(), TimeUnit.SECONDS),
+							myErrorsCounter.get());
+
+						StringBuilder timings = new StringBuilder();
+						timings.append("Timings:");
+						for (int i = 0; i < ourClientInvocationCounts.size(); i++) {
+							timings.append("\n * ");
+							timings.append(ourClients.get(i).getServerBase());
+							timings.append(" - Avg ");
+							long avg = ourClientInvocationTimes.get(i).get() / (long) ourClientInvocationCounts.get(i).get();
+							timings.append(avg);
+							timings.append("ms");
+						}
+						ourLog.info(timings.toString());
+					}
+				} catch (Throwable t) {
+					myErrorsCounter.incrementAndGet();
+					ourLog.error("Failure during task", t);
 				}
 			}
 		}
@@ -138,7 +180,7 @@ public class SyntheaPerfTest {
 	public static void main(String[] args) throws Exception {
 
 		String directory = args[0];
-		String baseUrl = args[1];
+		String baseUrls = args[1];
 		String credentials = args[2];
 		String threads = args[3];
 		String uploadMetadata = args[4];
@@ -165,13 +207,21 @@ public class SyntheaPerfTest {
 			files = files.subList(ourOffset, files.size());
 		}
 
-		ourLog.info("Uploading to FHIR server at base URL: {}", baseUrl);
+
 		ourCtx.getRestfulClientFactory().setConnectionRequestTimeout(1000000);
 		ourCtx.getRestfulClientFactory().setConnectTimeout(1000000);
 		ourCtx.getRestfulClientFactory().setSocketTimeout(1000000);
-		ourClient = ourCtx.newRestfulGenericClient(baseUrl);
-		ourClient.registerInterceptor(new BasicAuthInterceptor(credentials));
-		ourClient.capabilities().ofType(CapabilityStatement.class).execute();
+
+		String[] baseUrlSplit = baseUrls.split(",");
+		for (String next : baseUrlSplit) {
+			ourLog.info("Uploading to FHIR server at base URL: {}", next);
+			IGenericClient client = ourCtx.newRestfulGenericClient(next);
+			client.registerInterceptor(new BasicAuthInterceptor(credentials));
+			client.capabilities().ofType(CapabilityStatement.class).execute();
+			ourClients.add(client);
+			ourClientInvocationCounts.add(new AtomicInteger());
+			ourClientInvocationTimes.add(new AtomicLong());
+		}
 
 		if (uploadMetadata.equals("true")) {
 			ourLog.info("Loading metadata files...");
