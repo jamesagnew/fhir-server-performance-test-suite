@@ -6,9 +6,11 @@ To build:
 mvn clean install
 ```
 
-To run (argument 0 is the Synthea directory, argument 1 is the FHIR endpoint base URL):
+# Test 1: Load Data
 
 ```
-java -jar target/synthea-bulk-loader.jar ../synthea/output/fhir http://localhost:8000
+java -cp target/synthea-bulk-loader.jar bulkload.Test01_LoadDataUsingTransactions ../synthea/output/fhir/ "ENDPOINT1,ENDPOINT2,..." "username:password" 70 true
 ```
+
+# Test 2: Run Searches
 

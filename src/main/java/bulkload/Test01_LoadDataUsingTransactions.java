@@ -31,8 +31,8 @@ import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
-public class SyntheaPerfTest {
-	private static final Logger ourLog = LoggerFactory.getLogger(SyntheaPerfTest.class);
+public class Test01_LoadDataUsingTransactions {
+	private static final Logger ourLog = LoggerFactory.getLogger(Test01_LoadDataUsingTransactions.class);
 	private static final FhirContext ourCtx;
 	private static IGenericClient ourClient;
 	private static int ourMaxThreads;
@@ -163,8 +163,10 @@ public class SyntheaPerfTest {
 		if (ourOffset > 0) {
 			ourLog.info("Starting at offset {}", ourOffset);
 			files = files.subList(ourOffset, files.size());
+		} else {
+			ourLog.info("Offset is {}", ourOffset);
 		}
-
+		
 		ourLog.info("Uploading to FHIR server at base URL: {}", baseUrl);
 		ourCtx.getRestfulClientFactory().setConnectionRequestTimeout(1000000);
 		ourCtx.getRestfulClientFactory().setConnectTimeout(1000000);
@@ -182,13 +184,7 @@ public class SyntheaPerfTest {
 		ourLog.info("Loading non metadata files...");
 		List<Path> nonMeta = files.stream().filter(t -> !t.toString().contains("hospital") && !t.toString().contains("practitioner")).collect(Collectors.toList());
 
-//		ourLog.info("Preloading a few files single-threaded in order to seed tags...");
-//		new Uploader(Collections.singletonList(nonMeta.remove(0)));
-//		new Uploader(Collections.singletonList(nonMeta.remove(0)));
-//		new Uploader(Collections.singletonList(nonMeta.remove(0)));
-//		new Uploader(Collections.singletonList(nonMeta.remove(0)));
-
-		ourLog.info("Starting real load with {} threads...", ourMaxThreads);
+		ourLog.info("Starting real load of {} files with {} threads...", nonMeta.size(), ourMaxThreads);
 		new Uploader(nonMeta);
 	}
 
