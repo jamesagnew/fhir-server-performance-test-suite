@@ -16,8 +16,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -31,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+import java.util.zip.GZIPInputStream;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
@@ -113,10 +118,22 @@ public class Test01_LoadDataUsingTransactions {
 			public void run() {
 				try {
 					String bundle;
-					try (FileReader reader = new FileReader(myPath.toFile())) {
-						bundle = IOUtils.toString(reader);
-					} catch (IOException e) {
-						throw new InternalErrorException(e);
+					if (myPath.toString().endsWith(".json.gz")) {
+						try (FileInputStream fileInputStream = new FileInputStream(myPath.toFile())) {
+							try (GZIPInputStream gzipInputStream = new GZIPInputStream(fileInputStream)) {
+								try (Reader reader = new InputStreamReader(gzipInputStream, StandardCharsets.UTF_8)) {
+									bundle = IOUtils.toString(reader);
+								} catch (IOException e) {
+									throw new InternalErrorException(e);
+								}
+							}
+						}
+					} else {
+						try (FileReader reader = new FileReader(myPath.toFile())) {
+							bundle = IOUtils.toString(reader);
+						} catch (IOException e) {
+							throw new InternalErrorException(e);
+						}
 					}
 					if (isBlank(bundle)) {
 						myErrorsCounter.incrementAndGet();
@@ -224,7 +241,7 @@ public class Test01_LoadDataUsingTransactions {
 		ourLog.info("Searching for Synthea files in directory: {}", directory);
 		List<Path> files = Files
 			.list(FileSystems.getDefault().getPath(directory))
-			.filter(t -> t.toString().endsWith(".json"))
+			.filter(t -> t.toString().endsWith(".json") || t.toString().endsWith(".json.gz"))
 			.sorted(Comparator.comparing(Path::toString))
 			.collect(Collectors.toList());
 
