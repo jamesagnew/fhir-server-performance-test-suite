@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -37,8 +38,7 @@ public class Test01_LoadDataUsingTransactions {
 	private static final Logger ourLog = LoggerFactory.getLogger(Test01_LoadDataUsingTransactions.class);
 	private static final FhirContext ourCtx;
 	private static List<IGenericClient> ourClients = new ArrayList<>();
-	private static List<AtomicInteger> ourClientInvocationCounts = new ArrayList<>();
-	private static List<AtomicLong> ourClientInvocationTimes = new ArrayList<>();
+	private static List<ThreadTiming> ourClientInvocationCounts = new ArrayList<>();
 	private static int ourMaxThreads;
 	private static int ourOffset;
 
@@ -76,9 +76,18 @@ public class Test01_LoadDataUsingTransactions {
 			mySw = new StopWatch();
 			List<Future<?>> futures = new ArrayList<>();
 			myPathsCount = thePaths.size();
-			for (Path next : thePaths) {
+
+			ourLog.info("Going to submit {} tasks", thePaths.size());
+
+			for (int i = 0, thePathsSize = thePaths.size(); i < thePathsSize; i++) {
+				if (i % 1000 == 0) {
+					ourLog.info("Have submitted {} tasks", i);
+				}
+				Path next = thePaths.get(i);
 				futures.add(myExecutor.submit(new MyTask(next)));
 			}
+
+			ourLog.info("Have submitted {} tasks in total", futures.size());
 
 			for (Future<?> next : futures) {
 				next.get();
@@ -110,6 +119,8 @@ public class Test01_LoadDataUsingTransactions {
 						throw new InternalErrorException(e);
 					}
 					if (isBlank(bundle)) {
+						myErrorsCounter.incrementAndGet();
+						ourLog.error("Error: empty bundle in {}", myPath.toFile());
 						return;
 					}
 
@@ -124,8 +135,7 @@ public class Test01_LoadDataUsingTransactions {
 							.execute();
 						long latency = System.currentTimeMillis() - start;
 
-						ourClientInvocationCounts.get(clientIndex).incrementAndGet();
-						ourClientInvocationTimes.get(clientIndex).addAndGet(latency);
+						ourClientInvocationCounts.get(clientIndex).addInvocation(latency);
 
 						// Subtract by 1 because of the Bundle resource
 						int resourceCount = StringUtils.countMatches(bundle, "resourceType") - 1;
@@ -147,8 +157,9 @@ public class Test01_LoadDataUsingTransactions {
 							mySw.formatThroughput(myResourcesCounter.get(), TimeUnit.SECONDS),
 							mySw.getEstimatedTimeRemaining(myFilesCounter.get(), myPathsCount),
 							myErrorsCounter.get());
-						ourLog.info("NEXT,{},{},{},{},{},{}",
+						ourLog.info("NEXT,{},{},{},{},{},{},{}",
 							mySw.getMillis(),
+							new DecimalFormat("0.0").format((double) mySw.getMillis() / (1000.0 * 60.0 * 60.0)),
 							myFilesCounter.get() + ourOffset,
 							myResourcesCounter.get(),
 							mySw.formatThroughput(myFilesCounter.get(), TimeUnit.SECONDS),
@@ -160,20 +171,39 @@ public class Test01_LoadDataUsingTransactions {
 						for (int i = 0; i < ourClientInvocationCounts.size(); i++) {
 							timings.append("\n * ");
 							timings.append(ourClients.get(i).getServerBase());
-							timings.append(" - Avg ");
-							long avg = ourClientInvocationTimes.get(i).get() / (long) ourClientInvocationCounts.get(i).get();
-							timings.append(avg);
-							timings.append("ms");
+							timings.append(" - ");
+							timings.append(ourClientInvocationCounts.get(i).describeAndClear());
 						}
 						ourLog.info(timings.toString());
 					}
 				} catch (Throwable t) {
 					myErrorsCounter.incrementAndGet();
-					ourLog.error("Failure during task", t);
+					ourLog.error("Error during task", t);
 				}
 			}
 		}
 
+
+	}
+
+	private static class ThreadTiming {
+
+		private long myInvocationCount;
+		private long myInvocationTime;
+
+		public synchronized void addInvocation(long theLatency) {
+			myInvocationCount++;
+			myInvocationTime += theLatency;
+		}
+
+		public synchronized String describeAndClear() {
+			if (myInvocationCount == 0) {
+				return "No invocations";
+			}
+
+			long average = myInvocationTime / myInvocationCount;
+			return myInvocationCount + " files, average " + StopWatch.formatMillis(average) + "/file";
+		}
 
 	}
 
@@ -221,8 +251,7 @@ public class Test01_LoadDataUsingTransactions {
 			client.registerInterceptor(new BasicAuthInterceptor(credentials));
 			client.capabilities().ofType(CapabilityStatement.class).execute();
 			ourClients.add(client);
-			ourClientInvocationCounts.add(new AtomicInteger());
-			ourClientInvocationTimes.add(new AtomicLong());
+			ourClientInvocationCounts.add(new ThreadTiming());
 		}
 
 		if (uploadMetadata.equals("true")) {
