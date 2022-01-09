@@ -219,7 +219,12 @@ public class Test01_LoadDataUsingTransactions {
 			}
 
 			long average = myInvocationTime / myInvocationCount;
-			return myInvocationCount + " files, average " + StopWatch.formatMillis(average) + "/file";
+			String retVal = myInvocationCount + " files, average " + StopWatch.formatMillis(average) + "/file";
+
+			myInvocationCount = 0;
+			myInvocationTime = 0;
+
+			return retVal;
 		}
 
 	}
