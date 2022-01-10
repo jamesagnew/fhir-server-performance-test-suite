@@ -46,7 +46,6 @@ public class Test01_LoadDataUsingTransactions {
 	private static List<IGenericClient> ourClients = new ArrayList<>();
 	private static List<ThreadTiming> ourClientInvocationCounts = new ArrayList<>();
 	private static EvictingQueue<Long> ourLatencies = EvictingQueue.create(500);
-	private static EvictingQueue<Long> ourLatencyResourceCounts = EvictingQueue.create(500);
 	private static int ourMaxThreads;
 	private static int ourOffset;
 
@@ -161,10 +160,10 @@ public class Test01_LoadDataUsingTransactions {
 						int resourceCount = StringUtils.countMatches(bundle, "resourceType") - 1;
 						myResourcesCounter.addAndGet(resourceCount);
 
+						long resourcesPerSecond = (long) (((double)resourceCount / (double)latency) * 1000.0);
 						ourClientInvocationCounts.get(clientIndex).addInvocation(latency);
 						synchronized(ourLatencies) {
-							ourLatencies.add(latency);
-							ourLatencyResourceCounts.add((long)resourceCount);
+							ourLatencies.add(resourcesPerSecond);
 						}
 
 					} catch (BaseServerResponseException e) {
@@ -176,18 +175,14 @@ public class Test01_LoadDataUsingTransactions {
 					if (fileCount % 10 == 0) {
 
 						List<Long> latencies;
-						List<Long> latencyResourceCounts;
 						synchronized (ourLatencies) {
 							latencies = ourLatencies.stream().toList();
-							latencyResourceCounts = ourLatencyResourceCounts.stream().toList();
 						}
 						long latenciesTotal = 0;
-						long resourcesTotal = 0;
 						for (int i = 0; i < latencies.size(); i++) {
 							latenciesTotal += latencies.get(i);
-							resourcesTotal += latencyResourceCounts.get(i);
 						}
-						long slidingLatency = (long) (((double)resourcesTotal / (double)latenciesTotal) * 1000.0);
+						long slidingLatency = latenciesTotal / latencies.size();
 
 						ourLog.info("Have uploaded {}/{} files with {} resources in {} - {} files/sec - {} res/sec - Sliding {} res/sec - ETA {} - {} errors",
 							myFilesCounter.get() + ourOffset,
