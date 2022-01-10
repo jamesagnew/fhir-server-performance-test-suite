@@ -8,6 +8,7 @@ import ca.uhn.fhir.rest.client.interceptor.BasicAuthInterceptor;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import ca.uhn.fhir.util.StopWatch;
+import com.google.common.collect.EvictingQueue;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
@@ -44,6 +45,8 @@ public class Test01_LoadDataUsingTransactions {
 	private static final FhirContext ourCtx;
 	private static List<IGenericClient> ourClients = new ArrayList<>();
 	private static List<ThreadTiming> ourClientInvocationCounts = new ArrayList<>();
+	private static EvictingQueue<Long> ourLatencies = EvictingQueue.create(500);
+	private static EvictingQueue<Long> ourLatencyResourceCounts = EvictingQueue.create(500);
 	private static int ourMaxThreads;
 	private static int ourOffset;
 
@@ -83,6 +86,8 @@ public class Test01_LoadDataUsingTransactions {
 			myPathsCount = thePaths.size();
 
 			ourLog.info("Going to submit {} tasks", thePaths.size());
+
+			ourLog.info("LOAD10-LOAD500,Millis Elapsed,Hours Elapsed,Patients Uploaded,Resources Uploaded,Patients/Sec,Resources/Sec,Resources/Sec Moving Average,Errors");
 
 			for (int i = 0, thePathsSize = thePaths.size(); i < thePathsSize; i++) {
 				if (i % 1000 == 0) {
@@ -152,11 +157,15 @@ public class Test01_LoadDataUsingTransactions {
 							.execute();
 						long latency = System.currentTimeMillis() - start;
 
-						ourClientInvocationCounts.get(clientIndex).addInvocation(latency);
-
 						// Subtract by 1 because of the Bundle resource
 						int resourceCount = StringUtils.countMatches(bundle, "resourceType") - 1;
 						myResourcesCounter.addAndGet(resourceCount);
+
+						ourClientInvocationCounts.get(clientIndex).addInvocation(latency);
+						synchronized(ourLatencies) {
+							ourLatencies.add(latency);
+							ourLatencyResourceCounts.add((long)resourceCount);
+						}
 
 					} catch (BaseServerResponseException e) {
 						ourLog.error("Failure: {}", e.toString());
@@ -165,23 +174,51 @@ public class Test01_LoadDataUsingTransactions {
 
 					int fileCount = myFilesCounter.incrementAndGet();
 					if (fileCount % 10 == 0) {
-						ourLog.info("Have uploaded {}/{} files with {} resources in {} - {} files/sec - {} res/sec - ETA {} - {} errors",
+
+						List<Long> latencies;
+						List<Long> latencyResourceCounts;
+						synchronized (ourLatencies) {
+							latencies = ourLatencies.stream().toList();
+							latencyResourceCounts = ourLatencyResourceCounts.stream().toList();
+						}
+						long latenciesTotal = 0;
+						long resourcesTotal = 0;
+						for (int i = 0; i < latencies.size(); i++) {
+							latenciesTotal += latencies.get(i);
+							resourcesTotal += latencyResourceCounts.get(i);
+						}
+						long slidingLatency = (long) (((double)resourcesTotal / (double)latenciesTotal) * 1000.0);
+
+						ourLog.info("Have uploaded {}/{} files with {} resources in {} - {} files/sec - {} res/sec - Sliding {} res/sec - ETA {} - {} errors",
 							myFilesCounter.get() + ourOffset,
 							myPathsCount + ourOffset,
 							myResourcesCounter.get(),
 							mySw,
 							mySw.formatThroughput(myFilesCounter.get(), TimeUnit.SECONDS),
 							mySw.formatThroughput(myResourcesCounter.get(), TimeUnit.SECONDS),
+							slidingLatency,
 							mySw.getEstimatedTimeRemaining(myFilesCounter.get(), myPathsCount),
 							myErrorsCounter.get());
-						ourLog.info("NEXT,{},{},{},{},{},{},{}",
+						ourLog.info("LOAD10,{},{},{},{},{},{},{},{}",
 							mySw.getMillis(),
 							new DecimalFormat("0.0").format((double) mySw.getMillis() / (1000.0 * 60.0 * 60.0)),
 							myFilesCounter.get() + ourOffset,
 							myResourcesCounter.get(),
 							mySw.formatThroughput(myFilesCounter.get(), TimeUnit.SECONDS),
 							mySw.formatThroughput(myResourcesCounter.get(), TimeUnit.SECONDS),
+							slidingLatency,
 							myErrorsCounter.get());
+						if (fileCount % 500 == 0) {
+							ourLog.info("LOAD500,{},{},{},{},{},{},{},{}",
+								mySw.getMillis(),
+								new DecimalFormat("0.0").format((double) mySw.getMillis() / (1000.0 * 60.0 * 60.0)),
+								myFilesCounter.get() + ourOffset,
+								myResourcesCounter.get(),
+								mySw.formatThroughput(myFilesCounter.get(), TimeUnit.SECONDS),
+								mySw.formatThroughput(myResourcesCounter.get(), TimeUnit.SECONDS),
+								slidingLatency,
+								myErrorsCounter.get());
+						}
 
 						StringBuilder timings = new StringBuilder();
 						timings.append("Timings:");
