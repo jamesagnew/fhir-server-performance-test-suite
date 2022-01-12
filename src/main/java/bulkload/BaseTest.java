@@ -18,6 +18,7 @@ public class BaseTest {
 	protected final CloseableHttpClient myHttpClient;
 	protected final List<String> myBaseUrls;
 	protected AtomicLong myBaseUrlCounter = new AtomicLong(0);
+	protected AtomicLong myErrorCounter = new AtomicLong(0);
 
 	public BaseTest(List<String> theBaseUrls, String theCredentials) {
 		myBaseUrls = theBaseUrls;

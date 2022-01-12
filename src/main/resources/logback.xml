@@ -26,6 +26,19 @@
 		<appender-ref ref="SEARCH"/>
 	</logger>
 
+	<appender name="CREATE" class="ch.qos.logback.core.FileAppender">
+		<file>create.csv.log</file>
+		<append>true</append>
+		<encoder>
+			<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %msg%n</pattern>
+		</encoder>
+	</appender>
+	<logger name="create" additivity="false" level="info">
+		<appender-ref ref="STDOUT"/>
+		<appender-ref ref="SEARCH"/>
+	</logger>
+
+
 	<logger name="bulkload" additivity="false" level="info">
 		<appender-ref ref="STDOUT"/>
 		<appender-ref ref="RUNTIME"/>
