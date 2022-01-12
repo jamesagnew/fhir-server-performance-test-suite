@@ -79,6 +79,8 @@ public class BaseScaleupTest extends BaseTest {
 	}
 
 	protected void run(Test02_SearchForEobsByPatient.IFunction theFunction) throws ExecutionException, InterruptedException {
+		myCsvLog.info("Timestamp,NEXT,Pass,Searches Performed,Concurrent Users,Mean (ms),75th Percentile (ms),98th Percentile (ms),99th Percentile (ms),Average Response (kb),Max Response (kb),Throughput / Sec,Errors");
+		
 		int pass = 0;
 		int numThreads;
 		int numLoads = 3;
