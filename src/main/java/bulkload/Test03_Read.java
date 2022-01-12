@@ -35,6 +35,7 @@ public class Test03_Read extends BaseScaleupTest {
 
 			StringBuilder url = new StringBuilder()
 				.append(getNextBaseUrl())
+				.append("/")
 				.append(getRandomPatientId())
 				;
 			HttpGet request = new HttpGet(url.toString());

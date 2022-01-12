@@ -83,7 +83,7 @@ public class BaseScaleupTest extends BaseTest {
 		
 		int pass = 0;
 		int numThreads;
-		int numLoads = 3;
+		int numLoads = 10;
 
 		for (numThreads = 1; numThreads < 100; numThreads++) {
 			for (int i = 0; i < 3; i++) {
