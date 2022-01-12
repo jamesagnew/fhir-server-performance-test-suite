@@ -39,18 +39,28 @@
 	</logger>
 
 	<appender name="READ" class="ch.qos.logback.core.FileAppender">
-<file>read.csv.log</file>
-<append>true</append>
-<encoder>
-	<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %msg%n</pattern>
-</encoder>
-</appender>
-<logger name="read" additivity="false" level="info">
-<appender-ref ref="STDOUT"/>
-<appender-ref ref="READ"/>
-</logger>
+		<file>read.csv.log</file>
+		<append>true</append>
+		<encoder>
+			<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %msg%n</pattern>
+		</encoder>
+	</appender>
+	<logger name="read" additivity="false" level="info">
+		<appender-ref ref="STDOUT"/>
+		<appender-ref ref="READ"/>
+	</logger>
 
-
+	<appender name="UPDATE" class="ch.qos.logback.core.FileAppender">
+		<file>update.csv.log</file>
+		<append>true</append>
+		<encoder>
+			<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %msg%n</pattern>
+		</encoder>
+	</appender>
+	<logger name="update" additivity="false" level="info">
+		<appender-ref ref="STDOUT"/>
+		<appender-ref ref="UPDATE"/>
+	</logger>
 
 	<logger name="bulkload" additivity="false" level="info">
 		<appender-ref ref="STDOUT"/>

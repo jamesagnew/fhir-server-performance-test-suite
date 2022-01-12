@@ -28,9 +28,7 @@ public class Test02_SearchForEobsByPatient extends BaseScaleupTest {
 			StringBuilder url = new StringBuilder()
 				.append(baseUrl)
 				.append("/ExplanationOfBenefit?patient=")
-				.append(patientId)
-//				.append("&_summary=count")
-				;
+				.append(patientId);
 			HttpGet request = new HttpGet(url.toString());
 			try (var response = myHttpClient.execute(request)) {
 				if (response.getStatusLine().getStatusCode() != 200) {

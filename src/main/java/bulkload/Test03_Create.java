@@ -23,8 +23,6 @@ public class Test03_Create extends BaseScaleupTest {
 
 	private static final Logger ourLog = LoggerFactory.getLogger(Test03_Create.class);
 
-	private static final DecimalFormat ourDecimalFormat = new DecimalFormat("0.0");
-
 	public Test03_Create(List<String> theBaseUrls, String theCredentials) {
 		super(theBaseUrls, theCredentials, "create");
 	}
