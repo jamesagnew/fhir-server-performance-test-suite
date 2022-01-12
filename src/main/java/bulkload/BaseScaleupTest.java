@@ -81,7 +81,7 @@ public class BaseScaleupTest extends BaseTest {
 	protected void run(Test02_SearchForEobsByPatient.IFunction theFunction) throws ExecutionException, InterruptedException {
 		int pass = 0;
 		int numThreads;
-		int numLoads = 3;
+		int numLoads = 10;
 
 		for (numThreads = 1; numThreads < 100; numThreads++) {
 			for (int i = 0; i < 3; i++) {
