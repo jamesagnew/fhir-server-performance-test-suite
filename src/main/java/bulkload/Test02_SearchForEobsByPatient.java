@@ -22,7 +22,7 @@ public class Test02_SearchForEobsByPatient extends BaseScaleupTest {
 		loadPatientIds();
 
 		IFunction function = (theResponseCharCounter) -> {
-			String patientId = getPatientIds().get((int) (Math.random() * (double) getPatientIds().size()));
+			String patientId = getRandomPatientId();
 			String baseUrl = getNextBaseUrl();
 
 			StringBuilder url = new StringBuilder()

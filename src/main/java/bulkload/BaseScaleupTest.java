@@ -8,6 +8,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
+import org.apache.http.entity.ContentType;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Patient;
 import org.slf4j.Logger;
@@ -24,23 +25,28 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
 public class BaseScaleupTest extends BaseTest {
+	public static final ContentType CONTENT_TYPE_FHIR_JSON = ContentType.parse("application/fhir+json");
 	private static final Logger ourLog = LoggerFactory.getLogger(BaseScaleupTest.class);
 	private static final DecimalFormat ourDecimalFormat = new DecimalFormat("0.0");
 	protected final Logger myCsvLog;
+	private final String myCsvLogName;
 	private ArrayList<String> myPatientIds;
+	protected AtomicLong myBaseUrlCounter = new AtomicLong(0);
 
 	public BaseScaleupTest(List<String> theBaseUrls, String theCredentials, String theCsvLogName) {
 		super(theBaseUrls, theCredentials);
 		myCsvLog = LoggerFactory.getLogger(theCsvLogName);
+		myCsvLogName = theCsvLogName;
 	}
 
-	protected ArrayList<String> getPatientIds() {
+	protected String getRandomPatientId() {
 		Validate.notNull(myPatientIds);
-		return myPatientIds;
+		return myPatientIds.get((int) (Math.random() * (double) myPatientIds.size()));
 	}
 
 	protected void loadPatientIds() {
@@ -107,7 +113,7 @@ public class BaseScaleupTest extends BaseTest {
 		double pct98 = latencyTimer.getSnapshot().get98thPercentile();
 		double pct99 = latencyTimer.getSnapshot().get99thPercentile();
 		int totalSearches = numThreads * numLoads;
-		ourLog.info("Pass {} Finished {} searches across {} threads - Mean {}ms - 75th pct {}ms - 98th pct {}ms - 99th pct {}ms - Average response {} - Max response {} - Overall throughput {} req/sec - {} errors", pass, totalSearches, numThreads, formatNanos(mean), formatNanos(pct75), formatNanos(pct98), formatNanos(pct99), FileUtil.formatFileSize((long) responseCharCount.getSnapshot().getMean()), FileUtil.formatFileSize(responseCharCount.getSnapshot().getMax()), sw.formatThroughput(totalSearches, TimeUnit.SECONDS), myErrorCounter.get());
+		ourLog.info("Pass {} Finished {} {} across {} threads - Mean {}ms - 75th pct {}ms - 98th pct {}ms - 99th pct {}ms - Average response {} - Max response {} - Overall throughput {} req/sec - {} errors", pass, totalSearches, myCsvLogName, numThreads, formatNanos(mean), formatNanos(pct75), formatNanos(pct98), formatNanos(pct99), FileUtil.formatFileSize((long) responseCharCount.getSnapshot().getMean()), FileUtil.formatFileSize(responseCharCount.getSnapshot().getMax()), sw.formatThroughput(totalSearches, TimeUnit.SECONDS), myErrorCounter.get());
 		myCsvLog.info(",NEXT,{},{},{},{},{},{},{},{},{},{},{}", pass, totalSearches, numThreads, formatNanos(mean), formatNanos(pct75), formatNanos(pct98), formatNanos(pct99), ourDecimalFormat.format((long) responseCharCount.getSnapshot().getMean() / 1024), ourDecimalFormat.format(responseCharCount.getSnapshot().getMax() / 1024), sw.formatThroughput(totalSearches, TimeUnit.SECONDS), myErrorCounter.get());
 
 		executor.shutdown();
