@@ -14,6 +14,18 @@
 		</encoder>
 	</appender>
 
+	<appender name="SEARCH" class="ch.qos.logback.core.FileAppender">
+		<file>search.csv.log</file>
+		<append>true</append>
+		<encoder>
+			<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %msg%n</pattern>
+		</encoder>
+	</appender>
+	<logger name="search" additivity="false" level="info">
+		<appender-ref ref="STDOUT"/>
+		<appender-ref ref="SEARCH"/>
+	</logger>
+
 	<logger name="bulkload" additivity="false" level="info">
 		<appender-ref ref="STDOUT"/>
 		<appender-ref ref="RUNTIME"/>

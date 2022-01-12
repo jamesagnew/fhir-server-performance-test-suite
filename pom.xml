@@ -44,6 +44,12 @@
       <version>5.3.7</version>
     </dependency>
 
+    <dependency>
+    <groupId>io.dropwizard.metrics</groupId>
+    <artifactId>metrics-core</artifactId>
+    <version>4.2.7</version>
+    </dependency>
+
   </dependencies>
 
   <build>
