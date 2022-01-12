@@ -100,7 +100,7 @@ public class Test02_SearchForEobsByPatient extends BaseScaleupTest {
 		double pct99 = latencyTimer.getSnapshot().get99thPercentile();
 		int totalSearches = numThreads * numLoads;
 		ourLog.info("Pass {} Finished {} searches across {} threads - Mean {}ms - 75th pct {}ms - 98th pct {}ms - 99th pct {}ms - Average response {} - Max response {} - Overall throughput {} req/sec", pass, totalSearches, numThreads, formatNanos(mean), formatNanos(pct75), formatNanos(pct98), formatNanos(pct99), FileUtil.formatFileSize((long) responseCharCount.getSnapshot().getMean()), FileUtil.formatFileSize(responseCharCount.getSnapshot().getMax()), sw.formatThroughput(totalSearches, TimeUnit.SECONDS));
-		myCsvLog.info(",NEXT,{},{}{},{},{},{},{},{},{},{}", pass, totalSearches, numThreads, formatNanos(mean), formatNanos(pct75), formatNanos(pct98), formatNanos(pct99), ourDecimalFormat.format((long) responseCharCount.getSnapshot().getMean() / 1024), ourDecimalFormat.format(responseCharCount.getSnapshot().getMax() / 1024), sw.formatThroughput(totalSearches, TimeUnit.SECONDS));
+		myCsvLog.info(",NEXT,{},{},{},{},{},{},{},{},{},{}", pass, totalSearches, numThreads, formatNanos(mean), formatNanos(pct75), formatNanos(pct98), formatNanos(pct99), ourDecimalFormat.format((long) responseCharCount.getSnapshot().getMean() / 1024), ourDecimalFormat.format(responseCharCount.getSnapshot().getMax() / 1024), sw.formatThroughput(totalSearches, TimeUnit.SECONDS));
 
 		executor.shutdown();
 	}
