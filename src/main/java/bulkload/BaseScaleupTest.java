@@ -79,13 +79,13 @@ public class BaseScaleupTest extends BaseTest {
 	}
 
 	protected void run(Test02_SearchForEobsByPatient.IFunction theFunction) throws ExecutionException, InterruptedException {
-		myCsvLog.info("Timestamp,NEXT,Pass,Searches Performed,Concurrent Users,Mean (ms),75th Percentile (ms),98th Percentile (ms),99th Percentile (ms),Average Response (kb),Max Response (kb),Throughput / Sec,Errors");
+		myCsvLog.info("Timestamp,NEXT,Pass,Searches Performed,Concurrent Users,Min (ms),Mean (ms),75th Percentile (ms),98th Percentile (ms),99th Percentile (ms),Average Response (kb),Max Response (kb),Throughput / Sec,Errors");
 		
 		int pass = 0;
 		int numThreads;
 		int numLoads = 10;
 
-		for (numThreads = 1; numThreads < 100; numThreads++) {
+		for (numThreads = 1; numThreads < 200; numThreads++) {
 			for (int i = 0; i < 3; i++) {
 				pass++;
 				performPass(pass, numThreads, numLoads, theFunction);
@@ -110,13 +110,14 @@ public class BaseScaleupTest extends BaseTest {
 			next.get();
 		}
 
+		double min = latencyTimer.getSnapshot().getMin();
 		double mean = latencyTimer.getSnapshot().getMean();
 		double pct75 = latencyTimer.getSnapshot().get75thPercentile();
 		double pct98 = latencyTimer.getSnapshot().get98thPercentile();
 		double pct99 = latencyTimer.getSnapshot().get99thPercentile();
 		int totalSearches = numThreads * numLoads;
 		ourLog.info("Pass {} Finished {} {} across {} threads - Mean {}ms - 75th pct {}ms - 98th pct {}ms - 99th pct {}ms - Average response {} - Max response {} - Overall throughput {} req/sec - {} errors", pass, totalSearches, myCsvLogName, numThreads, formatNanos(mean), formatNanos(pct75), formatNanos(pct98), formatNanos(pct99), FileUtil.formatFileSize((long) responseCharCount.getSnapshot().getMean()), FileUtil.formatFileSize(responseCharCount.getSnapshot().getMax()), sw.formatThroughput(totalSearches, TimeUnit.SECONDS), myErrorCounter.get());
-		myCsvLog.info(",NEXT,{},{},{},{},{},{},{},{},{},{},{}", pass, totalSearches, numThreads, formatNanos(mean), formatNanos(pct75), formatNanos(pct98), formatNanos(pct99), ourDecimalFormat.format((long) responseCharCount.getSnapshot().getMean() / 1024), ourDecimalFormat.format(responseCharCount.getSnapshot().getMax() / 1024), sw.formatThroughput(totalSearches, TimeUnit.SECONDS), myErrorCounter.get());
+		myCsvLog.info(",NEXT,i{},{},{},{},{},{},{},{},{},{},{},{}", pass, totalSearches, numThreads, formatNanos(mean), formatNanos(pct75), formatNanos(pct98), formatNanos(pct99), ourDecimalFormat.format((long) responseCharCount.getSnapshot().getMean() / 1024), ourDecimalFormat.format(responseCharCount.getSnapshot().getMax() / 1024), sw.formatThroughput(totalSearches, TimeUnit.SECONDS), myErrorCounter.get());
 
 		executor.shutdown();
 	}
