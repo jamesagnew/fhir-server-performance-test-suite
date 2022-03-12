@@ -53,8 +53,8 @@ public class Test01_LoadDataUsingTransactions {
 
 		ourCtx = FhirContext.forR4();
 		ApacheRestfulClientFactory clientFactory = new ApacheRestfulClientFactory(ourCtx);
-		clientFactory.setPoolMaxPerRoute(100);
-		clientFactory.setPoolMaxTotal(100);
+		clientFactory.setPoolMaxPerRoute(500);
+		clientFactory.setPoolMaxTotal(500);
 		ourCtx.setRestfulClientFactory(clientFactory);
 	}
 
