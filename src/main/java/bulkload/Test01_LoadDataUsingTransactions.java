@@ -3,6 +3,7 @@ package bulkload;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.jpa.search.reindex.BlockPolicy;
 import ca.uhn.fhir.rest.client.apache.ApacheRestfulClientFactory;
+import ca.uhn.fhir.rest.client.apache.GZipContentInterceptor;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.client.interceptor.BasicAuthInterceptor;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
@@ -300,6 +301,7 @@ public class Test01_LoadDataUsingTransactions {
 			ourLog.info("Uploading to FHIR server at base URL: {}", next);
 			IGenericClient client = ourCtx.newRestfulGenericClient(next);
 			client.registerInterceptor(new BasicAuthInterceptor(credentials));
+			client.registerInterceptor(new GZipContentInterceptor());
 			client.capabilities().ofType(CapabilityStatement.class).execute();
 			ourClients.add(client);
 			ourClientInvocationCounts.add(new ThreadTiming());
