@@ -25,6 +25,7 @@ public class BaseTest {
 		myBaseUrls = theBaseUrls;
 		myCtx = FhirContext.forR4Cached();
 		myCtx.setParserErrorHandler(new LenientErrorHandler());
+		myCtx.getRestfulClientFactory().setSocketTimeout(100000);
 		myFhirClient = myCtx.newRestfulGenericClient(theBaseUrls.get(0));
 		myFhirClient.registerInterceptor(new BasicAuthInterceptor(theCredentials));
 
