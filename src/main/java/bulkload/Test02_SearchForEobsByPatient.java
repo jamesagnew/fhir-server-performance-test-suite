@@ -1,6 +1,7 @@
 package bulkload;
 
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
+import com.codahale.metrics.Histogram;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.client.methods.HttpGet;
 import org.slf4j.Logger;
@@ -19,27 +20,9 @@ public class Test02_SearchForEobsByPatient extends BaseScaleupTest {
 	}
 
 	public void run() throws Exception {
-		loadPatientIds();
+		loadPatients();
 
-		IFunction function = (theResponseCharCounter) -> {
-			String patientId = getRandomPatientId();
-			String baseUrl = getNextBaseUrl();
-
-			StringBuilder url = new StringBuilder()
-				.append(baseUrl)
-				.append("/ExplanationOfBenefit?patient=")
-				.append(patientId);
-			HttpGet request = new HttpGet(url.toString());
-			try (var response = myHttpClient.execute(request)) {
-				if (response.getStatusLine().getStatusCode() != 200) {
-					ourLog.error("ERROR: Got HTTP status {}", response.getStatusLine().getStatusCode());
-					throw new InternalErrorException("Bad HTTP status");
-				}
-
-				int chars = IOUtils.toString(response.getEntity().getContent(), StandardCharsets.UTF_8).length();
-				theResponseCharCounter.update(chars);
-			}
-		};
+		IFunction function = new SearchTask();
 
 		run(function);
 	}
@@ -54,4 +37,23 @@ public class Test02_SearchForEobsByPatient extends BaseScaleupTest {
 	}
 
 
+	public static class SearchTask implements IFunction {
+		@Override
+		public void run(Histogram theResponseCharCounter, BaseScaleupTest theTest) throws Exception {
+			String patientId = theTest.getRandomPatientId();
+			String baseUrl = theTest.getNextBaseUrl();
+
+			StringBuilder url = new StringBuilder().append(baseUrl).append("/ExplanationOfBenefit?patient=").append(patientId);
+			HttpGet request = new HttpGet(url.toString());
+			try (var response = theTest.getHttpClient().execute(request)) {
+				if (response.getStatusLine().getStatusCode() != 200) {
+					ourLog.error("ERROR: Got HTTP status {}", response.getStatusLine().getStatusCode());
+					throw new InternalErrorException("Bad HTTP status");
+				}
+
+				int chars = IOUtils.toString(response.getEntity().getContent(), StandardCharsets.UTF_8).length();
+				theResponseCharCounter.update(chars);
+			}
+		}
+	}
 }

@@ -62,6 +62,18 @@
 		<appender-ref ref="UPDATE"/>
 	</logger>
 
+	<appender name="MIXEDBAG" class="ch.qos.logback.core.FileAppender">
+		<file>mixedbag.csv.log</file>
+		<append>true</append>
+		<encoder>
+			<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %msg%n</pattern>
+		</encoder>
+	</appender>
+	<logger name="mixedbag" additivity="false" level="info">
+		<appender-ref ref="STDOUT"/>
+		<appender-ref ref="MIXEDBAG"/>
+	</logger>
+
 	<logger name="bulkload" additivity="false" level="info">
 		<appender-ref ref="STDOUT"/>
 		<appender-ref ref="RUNTIME"/>

@@ -1,6 +1,7 @@
 package bulkload;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.parser.LenientErrorHandler;
 import ca.uhn.fhir.rest.api.Constants;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.client.interceptor.BasicAuthInterceptor;
@@ -22,7 +23,8 @@ public class BaseTest {
 
 	public BaseTest(List<String> theBaseUrls, String theCredentials) {
 		myBaseUrls = theBaseUrls;
-		myCtx = FhirContext.forR4();
+		myCtx = FhirContext.forR4Cached();
+		myCtx.setParserErrorHandler(new LenientErrorHandler());
 		myFhirClient = myCtx.newRestfulGenericClient(theBaseUrls.get(0));
 		myFhirClient.registerInterceptor(new BasicAuthInterceptor(theCredentials));
 
