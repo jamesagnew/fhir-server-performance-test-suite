@@ -43,7 +43,7 @@ public class Test02_SearchForEobsByPatient extends BaseScaleupTest {
 			String patientId = theTest.getRandomPatientId();
 			String baseUrl = theTest.getNextBaseUrl();
 
-			StringBuilder url = new StringBuilder().append(baseUrl).append("/ExplanationOfBenefit?patient=").append(patientId);
+			StringBuilder url = new StringBuilder().append(baseUrl).append("/ExplanationOfBenefit?patient=").append(patientId).append("&_fhirpath=Bundle.type");
 			HttpGet request = new HttpGet(url.toString());
 			try (var response = theTest.getHttpClient().execute(request)) {
 				if (response.getStatusLine().getStatusCode() != 200) {

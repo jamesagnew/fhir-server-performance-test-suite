@@ -94,10 +94,12 @@ public class BaseScaleupTest extends BaseTest {
 				break;
 			}
 
+			/*
 			if (!nextUrl.contains("hapi.fhir.org")) {
 				int pathStartIdx = StringUtils.ordinalIndexOf(nextUrl, "/", 3);
 				nextUrl = myFhirClient.getServerBase() + nextUrl.substring(pathStartIdx);
 			}
+			*/
 
 			ourLog.info("Have {} patients, loading page {}", patientIds.size(), ++page);
 			bundle = myFhirClient.loadPage().byUrl(nextUrl).andReturnBundle(Bundle.class).execute();
