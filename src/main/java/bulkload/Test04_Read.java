@@ -45,15 +45,14 @@ public class Test04_Read extends BaseScaleupTest {
 				.append("/")
 				.append(theTest.getRandomPatientId());
 			HttpGet request = new HttpGet(url.toString());
-			try (var response = theTest.getHttpClient().execute(request)) {
-				if (response.getStatusLine().getStatusCode() < 200 || response.getStatusLine().getStatusCode() > 299) {
-					ourLog.error("ERROR: Got HTTP status {}", response.getStatusLine().getStatusCode());
-					ourLog.error(IOUtils.toString(response.getEntity().getContent(), StandardCharsets.UTF_8));
-					throw new InternalErrorException("Bad HTTP status");
-				}
-				int chars = IOUtils.toString(response.getEntity().getContent(), StandardCharsets.UTF_8).length();
-				theResponseCharCounter.update(chars);
+			var response = theTest.getHttpClient().execute(request);
+			if (response.getStatusLine().getStatusCode() < 200 || response.getStatusLine().getStatusCode() > 299) {
+				ourLog.error("ERROR: Got HTTP status {}", response.getStatusLine().getStatusCode());
+				ourLog.error(IOUtils.toString(response.getEntity().getContent(), StandardCharsets.UTF_8));
+				throw new InternalErrorException("Bad HTTP status");
 			}
+
+			consumeAndCountResponse(theResponseCharCounter, response);
 		}
 	}
 }

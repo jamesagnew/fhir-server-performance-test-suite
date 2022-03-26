@@ -5,14 +5,29 @@ import ca.uhn.fhir.parser.LenientErrorHandler;
 import ca.uhn.fhir.rest.api.Constants;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.client.interceptor.BasicAuthInterceptor;
+import com.codahale.metrics.Histogram;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.io.IOUtils;
+import org.apache.http.ConnectionReuseStrategy;
 import org.apache.http.HttpRequestInterceptor;
+import org.apache.http.client.HttpRequestRetryHandler;
+import org.apache.http.client.UserTokenHandler;
 import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.config.ConnectionConfig;
+import org.apache.http.conn.socket.LayeredConnectionSocketFactory;
+import org.apache.http.impl.DefaultConnectionReuseStrategy;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.DefaultClientConnectionReuseStrategy;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.protocol.HttpContext;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class BaseTest {
@@ -38,14 +53,26 @@ public class BaseTest {
 			.setConnectionRequestTimeout(60 * 1000)
 			.setSocketTimeout(60 * 1000)
 			.setContentCompressionEnabled(true)
+			.setStaleConnectionCheckEnabled(true)
 			.build();
 
+		ConnectionReuseStrategy reuseStrategy= DefaultClientConnectionReuseStrategy.INSTANCE;
 		myHttpClient = HttpClientBuilder
 			.create()
 			.addInterceptorFirst((HttpRequestInterceptor) (request, context) -> request.addHeader("Authorization", "Basic " + encodedCredentials))
 			.setMaxConnPerRoute(1000)
 			.setMaxConnTotal(1000)
+			.setConnectionReuseStrategy(new DefaultConnectionReuseStrategy())
+			.setConnectionManager(new PoolingHttpClientConnectionManager(60, TimeUnit.SECONDS))
+			.setConnectionReuseStrategy(reuseStrategy)
 			.setDefaultRequestConfig(requestConfig)
+			.setConnectionManagerShared(true)
+			.setUserTokenHandler(new UserTokenHandler() {
+				@Override
+				public Object getUserToken(HttpContext context) {
+					return null;
+				}
+			})
 			.build();
 	}
 
@@ -54,4 +81,10 @@ public class BaseTest {
 		return myBaseUrls.get((int) (myBaseUrlCounter.incrementAndGet() % myBaseUrls.size()));
 	}
 
+	public static void consumeAndCountResponse(Histogram theResponseCharCounter, CloseableHttpResponse response) throws IOException {
+		InputStream content = response.getEntity().getContent();
+		int chars = IOUtils.toString(content, StandardCharsets.UTF_8).length();
+		response.getEntity().consumeContent();
+		theResponseCharCounter.update(chars);
+	}
 }
