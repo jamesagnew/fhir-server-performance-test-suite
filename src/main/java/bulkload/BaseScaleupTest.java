@@ -62,9 +62,7 @@ public class BaseScaleupTest extends BaseTest {
 	}
 
 	protected void loadPatients() {
-//		int wantPatients = 5000;
-		// FIXME: restore
-		int wantPatients = 50;
+		int wantPatients = 5000;
 
 		ourLog.info("Loading some patient IDs...");
 		Set<String> patientIds = new HashSet<>();
