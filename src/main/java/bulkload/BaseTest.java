@@ -34,8 +34,10 @@ public class BaseTest {
 		String encodedCredentials = Base64.encodeBase64String(theCredentials.getBytes(Constants.CHARSET_US_ASCII));
 
 		RequestConfig requestConfig = RequestConfig.custom()
-			.setConnectTimeout(60)
-			.setConnectionRequestTimeout(60)
+			.setConnectTimeout(60 * 1000)
+			.setConnectionRequestTimeout(60 * 1000)
+			.setSocketTimeout(60 * 1000)
+			.setContentCompressionEnabled(true)
 			.build();
 
 		myHttpClient = HttpClientBuilder
