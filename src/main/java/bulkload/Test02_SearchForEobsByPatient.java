@@ -43,13 +43,14 @@ public class Test02_SearchForEobsByPatient extends BaseScaleupTest {
 
 			StringBuilder url = new StringBuilder().append(baseUrl).append("/ExplanationOfBenefit?patient=").append(patientId).append("&_fhirpath=Bundle.type");
 			HttpGet request = new HttpGet(url.toString());
-			var response = theTest.getHttpClient().execute(request);
-			if (response.getStatusLine().getStatusCode() != 200) {
-				ourLog.error("ERROR: Got HTTP status {}", response.getStatusLine().getStatusCode());
-				throw new InternalErrorException("Bad HTTP status");
-			}
+			try (var response = theTest.getHttpClient().execute(request)) {
+				if (response.getStatusLine().getStatusCode() != 200) {
+					ourLog.error("ERROR: Got HTTP status {}", response.getStatusLine().getStatusCode());
+					throw new InternalErrorException("Bad HTTP status");
+				}
 
-			consumeAndCountResponse(theResponseCharCounter, response);
+				consumeAndCountResponse(theResponseCharCounter, response);
+			}
 		}
 
 	}

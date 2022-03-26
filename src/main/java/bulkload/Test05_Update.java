@@ -55,14 +55,15 @@ public class Test05_Update extends BaseScaleupTest {
 				.append(patientId);
 			HttpPut request = new HttpPut(url.toString());
 			request.setEntity(new StringEntity(patient, CONTENT_TYPE_FHIR_JSON));
-			var response = theTest.getHttpClient().execute(request);
-			if (response.getStatusLine().getStatusCode() < 200 || response.getStatusLine().getStatusCode() > 299) {
-				ourLog.error("ERROR: Got HTTP status {}", response.getStatusLine().getStatusCode());
-				ourLog.error(IOUtils.toString(response.getEntity().getContent(), StandardCharsets.UTF_8));
-				throw new InternalErrorException("Bad HTTP status");
-			}
+			try (var response = theTest.getHttpClient().execute(request)) {
+				if (response.getStatusLine().getStatusCode() < 200 || response.getStatusLine().getStatusCode() > 299) {
+					ourLog.error("ERROR: Got HTTP status {}", response.getStatusLine().getStatusCode());
+					ourLog.error(IOUtils.toString(response.getEntity().getContent(), StandardCharsets.UTF_8));
+					throw new InternalErrorException("Bad HTTP status");
+				}
 
-			consumeAndCountResponse(theResponseCharCounter, response);
+				consumeAndCountResponse(theResponseCharCounter, response);
+			}
 		}
 	}
 }
