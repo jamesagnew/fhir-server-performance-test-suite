@@ -10,12 +10,9 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.ConnectionReuseStrategy;
 import org.apache.http.HttpRequestInterceptor;
-import org.apache.http.client.HttpRequestRetryHandler;
 import org.apache.http.client.UserTokenHandler;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.config.ConnectionConfig;
-import org.apache.http.conn.socket.LayeredConnectionSocketFactory;
 import org.apache.http.impl.DefaultConnectionReuseStrategy;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.DefaultClientConnectionReuseStrategy;
@@ -52,7 +49,7 @@ public class BaseTest {
 			.setConnectTimeout(60 * 1000)
 			.setConnectionRequestTimeout(60 * 1000)
 			.setSocketTimeout(60 * 1000)
-			.setContentCompressionEnabled(true)
+			.setContentCompressionEnabled(false)
 			.setStaleConnectionCheckEnabled(true)
 			.build();
 
@@ -63,7 +60,6 @@ public class BaseTest {
 			.setMaxConnPerRoute(1000)
 			.setMaxConnTotal(1000)
 			.setConnectionReuseStrategy(new DefaultConnectionReuseStrategy())
-			.setConnectionManager(new PoolingHttpClientConnectionManager(60, TimeUnit.SECONDS))
 			.setConnectionReuseStrategy(reuseStrategy)
 			.setDefaultRequestConfig(requestConfig)
 			.setConnectionManagerShared(true)
@@ -73,6 +69,7 @@ public class BaseTest {
 					return null;
 				}
 			})
+			.disableContentCompression()
 			.build();
 	}
 
