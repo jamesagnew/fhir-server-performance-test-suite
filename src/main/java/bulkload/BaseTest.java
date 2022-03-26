@@ -7,6 +7,8 @@ import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.client.interceptor.BasicAuthInterceptor;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.http.HttpRequestInterceptor;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.config.ConnectionConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 
@@ -30,12 +32,18 @@ public class BaseTest {
 		myFhirClient.registerInterceptor(new BasicAuthInterceptor(theCredentials));
 
 		String encodedCredentials = Base64.encodeBase64String(theCredentials.getBytes(Constants.CHARSET_US_ASCII));
+
+		RequestConfig requestConfig = RequestConfig.custom()
+			.setConnectTimeout(60)
+			.setConnectionRequestTimeout(60)
+			.build();
+
 		myHttpClient = HttpClientBuilder
 			.create()
 			.addInterceptorFirst((HttpRequestInterceptor) (request, context) -> request.addHeader("Authorization", "Basic " + encodedCredentials))
 			.setMaxConnPerRoute(1000)
 			.setMaxConnTotal(1000)
-//			.disableContentCompression()
+			.setDefaultRequestConfig(requestConfig)
 			.build();
 	}
 
